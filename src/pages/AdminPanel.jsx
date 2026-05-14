@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, getDocs, getDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -12,7 +12,32 @@ export default function AdminPanel() {
   const fetchEdits = async () => {
     setLoading(true);
     const snap = await getDocs(query(collection(db, 'pendingEdits')));
-    setEdits(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const editsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    const withDiffs = await Promise.all(editsData.map(async (edit) => {
+      try {
+        const originalSnap = await getDoc(doc(db, edit.targetCollection, edit.targetDocId));
+        const originalData = originalSnap.exists() ? originalSnap.data() : {};
+        
+        const diff = {};
+        for (const key in edit.newData) {
+          // Ignorar metadata
+          if (key === 'createdAt' || key === 'createdBy') continue;
+          
+          if (JSON.stringify(edit.newData[key]) !== JSON.stringify(originalData[key])) {
+             diff[key] = {
+               old: originalData[key],
+               new: edit.newData[key]
+             };
+          }
+        }
+        return { ...edit, diff };
+      } catch (err) {
+        return { ...edit, diff: { 'Error': { old: 'N/A', new: 'No se pudo cargar el original' } } };
+      }
+    }));
+    
+    setEdits(withDiffs);
     setLoading(false);
   };
 
@@ -72,10 +97,24 @@ export default function AdminPanel() {
               </p>
               
               <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 4, marginBottom: 16 }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--neon-yellow)', marginBottom: 4 }}>Nuevos datos sugeridos:</p>
-                <pre style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto' }}>
-                  {JSON.stringify(edit.newData, null, 2)}
-                </pre>
+                <p style={{ fontSize: '0.8rem', color: 'var(--neon-yellow)', marginBottom: 8, fontWeight: 'bold' }}>Cambios propuestos:</p>
+                {edit.diff && Object.keys(edit.diff).length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {Object.entries(edit.diff).map(([key, vals]) => (
+                      <div key={key} style={{ fontSize: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 4 }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>{key}</strong>
+                        <div style={{ color: 'var(--badge-red-text)', textDecoration: 'line-through' }}>
+                          - {JSON.stringify(vals.old)}
+                        </div>
+                        <div style={{ color: 'var(--badge-green-text)' }}>
+                          + {JSON.stringify(vals.new)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>No hay cambios (o es idéntico al original).</p>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
