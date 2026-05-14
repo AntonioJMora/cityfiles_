@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LEGAL_TYPES = ['Legal', 'Civil legal', 'Civil ilegal', 'Ilegal'];
 const STATUSES   = ['Activo', 'Muerto', 'Desaparecido', 'Retirado'];
-const ALIGNMENTS = ['Legal Bueno', 'Neutral Bueno', 'Caótico Bueno', 'Legal Neutral', 'Neutral', 'Caótico Neutral', 'Legal Malvado', 'Neutral Malvado', 'Caótico Malvado'];
 
 export default function CharacterForm({ initialData, preselectedServer, onClose, onCreated }) {
   const { user, isAdmin } = useAuth();
@@ -14,8 +13,7 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
   const [form, setForm] = useState(initialData || {
     name: '', serverId: preselectedServer?.id || '', serverName: preselectedServer?.name || '',
     age: '', race: '', job: '', rank: '', legalType: 'Civil legal', illegalGroup: '', status: 'Activo',
-    appearance: '', backstory: '', personality: '', skills: '',
-    alignment: 'Neutral', player: '', imageUrl: ''
+    appearance: '', backstory: '', personality: '', skills: '', curiosities: '', player: '', imageUrl: ''
   });
 
   useEffect(() => {
@@ -150,13 +148,6 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
               </select>
             </div>
 
-            {/* Alineamiento */}
-            <div className="form-group">
-              <label>Alineamiento</label>
-              <select className="form-control" value={form.alignment} onChange={e => set('alignment', e.target.value)} id="select-char-alignment">
-                {ALIGNMENTS.map(a => <option key={a}>{a}</option>)}
-              </select>
-            </div>
 
             {/* Edad */}
             <div className="form-group">
@@ -198,6 +189,12 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
             <div className="form-group span-2">
               <label>Habilidades</label>
               <textarea className="form-control" placeholder="Habilidades y capacidades..." value={form.skills} onChange={e => set('skills', e.target.value)} rows={3} id="input-char-skills" />
+            </div>
+
+            {/* Curiosidades */}
+            <div className="form-group span-2">
+              <label>Curiosidades</label>
+              <textarea className="form-control" placeholder="Manías, miedos, detalles interesantes..." value={form.curiosities} onChange={e => set('curiosities', e.target.value)} rows={3} id="input-char-curiosities" />
             </div>
           </div>
 

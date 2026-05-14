@@ -6,11 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import CharacterForm from '../forms/CharacterForm';
 
 const STATUS_COLORS = { Activo: 'badge-green', Muerto: 'badge-red', Desaparecido: 'badge-yellow', Retirado: 'badge-gray' };
-const ALIGNMENT_LABELS = {
-  'Legal Bueno': '⚖️ Legal Bueno', 'Neutral Bueno': '🤝 Neutral Bueno', 'Caótico Bueno': '💥 Caótico Bueno',
-  'Legal Neutral': '📋 Legal Neutral', 'Neutral': '⚪ Neutral', 'Caótico Neutral': '🌀 Caótico Neutral',
-  'Legal Malvado': '🕴️ Legal Malvado', 'Neutral Malvado': '🐍 Neutral Malvado', 'Caótico Malvado': '💀 Caótico Malvado',
-};
 
 export default function CharacterDetail() {
   const { id } = useParams();
@@ -65,7 +60,6 @@ export default function CharacterDetail() {
             <div className="info-row"><span className="label">Origen</span><span className="value">{c.race || '—'}</span></div>
             <div className="info-row"><span className="label">Tipo</span><span className="value">{c.legalType || '—'}</span></div>
             {c.illegalGroup && <div className="info-row"><span className="label">Grupo Ilegal</span><span className="value">{c.illegalGroup}</span></div>}
-            <div className="info-row"><span className="label">Alineamiento</span><span className="value">{ALIGNMENT_LABELS[c.alignment] || c.alignment || '—'}</span></div>
             <div className="info-row">
               <span className="label">Servidor</span>
               <Link to={`/servers/${c.serverId}`} style={{ fontSize: '0.85rem' }}>{c.serverName}</Link>
@@ -111,6 +105,12 @@ export default function CharacterDetail() {
             <div className="info-block">
               <h3>Habilidades</h3>
               <p style={{ color: 'var(--text-primary)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{c.skills}</p>
+            </div>
+          )}
+          {c.curiosities && (
+            <div className="info-block">
+              <h3>Curiosidades</h3>
+              <p style={{ color: 'var(--text-primary)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{c.curiosities}</p>
             </div>
           )}
         </div>

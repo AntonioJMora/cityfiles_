@@ -104,16 +104,6 @@ export default function Roleplayers() {
                 </p>
               )}
 
-              {(isAdmin || rp.createdBy === user.uid) && (
-                <button
-                  className="btn btn-danger btn-sm"
-                  style={{ marginTop: 12 }}
-                  onClick={(e) => handleDelete(e, rp.id)}
-                  id={`delete-rp-${rp.id}`}
-                >
-                  🗑 Eliminar
-                </button>
-              )}
             </Link>
           ))}
         </div>
