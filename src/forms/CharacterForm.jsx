@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,11 +7,11 @@ const LEGAL_TYPES = ['Legal', 'Civil legal', 'Civil ilegal', 'Ilegal'];
 const STATUSES   = ['Activo', 'Muerto', 'Desaparecido', 'Retirado'];
 const ALIGNMENTS = ['Legal Bueno', 'Neutral Bueno', 'Caótico Bueno', 'Legal Neutral', 'Neutral', 'Caótico Neutral', 'Legal Malvado', 'Neutral Malvado', 'Caótico Malvado'];
 
-export default function CharacterForm({ preselectedServer, onClose, onCreated }) {
-  const { user } = useAuth();
+export default function CharacterForm({ initialData, preselectedServer, onClose, onCreated }) {
+  const { user, isAdmin } = useAuth();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(initialData || {
     name: '', serverId: preselectedServer?.id || '', serverName: preselectedServer?.name || '',
     age: '', race: '', job: '', rank: '', legalType: 'Civil legal', illegalGroup: '', status: 'Activo',
     appearance: '', backstory: '', personality: '', skills: '',
@@ -19,12 +19,14 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
   });
 
   useEffect(() => {
-    if (!preselectedServer) {
-      getDocs(query(collection(db, 'servers'), orderBy('name'))).then(snap => {
-        setServers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    if (!preselectedServer && !initialData) {
+      import('firebase/firestore').then(({ getDocs, query, collection, orderBy }) => {
+        getDocs(query(collection(db, 'servers'), orderBy('name'))).then(snap => {
+          setServers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        });
       });
     }
-  }, [preselectedServer]);
+  }, [preselectedServer, initialData]);
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -43,12 +45,32 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
         ...form,
         illegalGroup: (form.legalType === 'Civil ilegal' || form.legalType === 'Ilegal') ? form.illegalGroup : '',
         age: form.age ? Number(form.age) : null,
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'characters'), charData);
-      onCreated({ id: docRef.id, ...charData });
+      if (initialData) {
+        if (isAdmin || initialData.createdBy === user.uid) {
+          await updateDoc(doc(db, 'characters', initialData.id), charData);
+          onCreated({ ...initialData, ...charData });
+        } else {
+          await addDoc(collection(db, 'pendingEdits'), {
+            targetCollection: 'characters',
+            targetDocId: initialData.id,
+            targetName: initialData.name,
+            suggestedBy: user.displayName || user.email,
+            newData: charData,
+            createdAt: serverTimestamp()
+          });
+          alert('Tu sugerencia de edición ha sido enviada a moderación.');
+          onClose();
+        }
+      } else {
+        const docRef = await addDoc(collection(db, 'characters'), {
+          ...charData,
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+        });
+        onCreated({ id: docRef.id, ...charData });
+      }
     } catch (err) {
       console.error(err);
       alert('Error al guardar. Revisa la consola.');
@@ -61,7 +83,7 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2>🎭 Nueva Ficha de Personaje</h2>
+          <h2>{initialData ? '✏️ Editar Personaje' : '🎭 Nueva Ficha de Personaje'}</h2>
           <button className="modal-close" onClick={onClose} id="close-char-form">✕</button>
         </div>
 
@@ -82,8 +104,8 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
             {/* Servidor */}
             <div className="form-group span-2">
               <label>Servidor *</label>
-              {preselectedServer ? (
-                <input className="form-control" value={preselectedServer.name} disabled />
+              {(preselectedServer || initialData) ? (
+                <input className="form-control" value={form.serverName} disabled />
               ) : (
                 <select className="form-control" value={form.serverId} onChange={handleServerChange} required id="select-char-server">
                   <option value="">— Selecciona un servidor —</option>
@@ -182,7 +204,7 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={loading} id="submit-char-form">
-              {loading ? 'Guardando...' : '+ Crear Personaje'}
+              {loading ? 'Guardando...' : initialData ? 'Guardar Cambios' : '+ Crear Personaje'}
             </button>
           </div>
         </form>

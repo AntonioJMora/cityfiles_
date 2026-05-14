@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,13 +7,13 @@ const GENRES       = ['Policial', 'Criminal', 'Político', 'Empresarial', 'Médi
 const EXPERIENCES  = ['Principiante', 'Intermedio', 'Avanzado', 'Veterano'];
 const AVAILABILITY = ['Mañanas', 'Tardes', 'Noches', 'Mañanas/Tardes', 'Tardes/Noches', 'Fines de semana', 'Flexible'];
 
-export default function RoleplayerForm({ onClose, onCreated }) {
-  const { user } = useAuth();
+export default function RoleplayerForm({ initialData, onClose, onCreated }) {
+  const { user, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [selectedGenres, setSelectedGenres] = useState([]);
+  const [selectedGenres, setSelectedGenres] = useState(initialData?.favoriteGenres || []);
   const [serverInput, setServerInput] = useState('');
-  const [serverList, setServerList] = useState([]);
-  const [form, setForm] = useState({
+  const [serverList, setServerList] = useState(initialData?.servers || []);
+  const [form, setForm] = useState(initialData || {
     username: '', bio: '', style: '',
     experience: 'Intermedio', availability: 'Flexible', discord: '',
   });
@@ -37,14 +37,36 @@ export default function RoleplayerForm({ onClose, onCreated }) {
     if (!form.username.trim()) return;
     setLoading(true);
     try {
-      const docRef = await addDoc(collection(db, 'roleplayers'), {
+      const dataToSave = {
         ...form,
         favoriteGenres: selectedGenres,
         servers: serverList,
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      onCreated({ id: docRef.id, ...form, favoriteGenres: selectedGenres, servers: serverList });
+      };
+
+      if (initialData) {
+        if (isAdmin || initialData.createdBy === user.uid) {
+          await updateDoc(doc(db, 'roleplayers', initialData.id), dataToSave);
+          onCreated({ ...initialData, ...dataToSave });
+        } else {
+          await addDoc(collection(db, 'pendingEdits'), {
+            targetCollection: 'roleplayers',
+            targetDocId: initialData.id,
+            targetName: initialData.username,
+            suggestedBy: user.displayName || user.email,
+            newData: dataToSave,
+            createdAt: serverTimestamp()
+          });
+          alert('Tu sugerencia de edición ha sido enviada a moderación.');
+          onClose();
+        }
+      } else {
+        const docRef = await addDoc(collection(db, 'roleplayers'), {
+          ...dataToSave,
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+        });
+        onCreated({ id: docRef.id, ...dataToSave });
+      }
     } catch (err) {
       console.error(err);
       alert('Error al guardar. Revisa la consola.');
@@ -57,7 +79,7 @@ export default function RoleplayerForm({ onClose, onCreated }) {
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2>👤 Nuevo Perfil de Roleador</h2>
+          <h2>{initialData ? '✏️ Editar Perfil de Roleador' : '👤 Nuevo Perfil de Roleador'}</h2>
           <button className="modal-close" onClick={onClose} id="close-rp-form">✕</button>
         </div>
 
@@ -152,7 +174,7 @@ export default function RoleplayerForm({ onClose, onCreated }) {
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={loading} id="submit-rp-form">
-              {loading ? 'Guardando...' : '+ Crear Perfil'}
+              {loading ? 'Guardando...' : initialData ? 'Guardar Cambios' : '+ Crear Perfil'}
             </button>
           </div>
         </form>

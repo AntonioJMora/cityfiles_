@@ -10,6 +10,7 @@ import Characters from './pages/Characters';
 import CharacterDetail from './pages/CharacterDetail';
 import Roleplayers from './pages/Roleplayers';
 import RoleplayerDetail from './pages/RoleplayerDetail';
+import AdminPanel from './pages/AdminPanel';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/characters/:id" element={<ProtectedRoute><CharacterDetail /></ProtectedRoute>} />
         <Route path="/roleplayers" element={<ProtectedRoute><Roleplayers /></ProtectedRoute>} />
         <Route path="/roleplayers/:id" element={<ProtectedRoute><RoleplayerDetail /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

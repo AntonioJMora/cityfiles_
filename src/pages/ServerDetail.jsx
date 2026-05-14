@@ -4,17 +4,19 @@ import { doc, getDoc, deleteDoc, collection, query, where, getDocs, orderBy } fr
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import CharacterForm from '../forms/CharacterForm';
+import ServerForm from '../forms/ServerForm';
 
 const STATUS_COLORS = { Activo: 'badge-green', Muerto: 'badge-red', Desaparecido: 'badge-yellow', Retirado: 'badge-gray' };
 
 export default function ServerDetail() {
   const { id } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [server, setServer] = useState(null);
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCharForm, setShowCharForm] = useState(false);
+  const [showEditServer, setShowEditServer] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -78,7 +80,11 @@ export default function ServerDetail() {
             + Añadir Personaje
           </button>
 
-          {isAdmin && (
+          <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={() => setShowEditServer(true)}>
+            {isAdmin || server.createdBy === user.uid ? '✏️ Editar Servidor' : '📝 Sugerir Edición'}
+          </button>
+
+          {(isAdmin || server.createdBy === user.uid) && (
             <button className="btn btn-danger" style={{ width: '100%', justifyContent: 'center' }} onClick={handleDeleteServer} id="btn-delete-server">
               🗑 Eliminar Servidor
             </button>
@@ -136,6 +142,17 @@ export default function ServerDetail() {
           preselectedServer={{ id, name: server.name }}
           onClose={() => setShowCharForm(false)}
           onCreated={(newChar) => { setShowCharForm(false); setCharacters(prev => [newChar, ...prev]); }}
+        />
+      )}
+
+      {showEditServer && (
+        <ServerForm
+          initialData={server}
+          onClose={() => setShowEditServer(false)}
+          onCreated={(newData) => {
+            if (isAdmin || server.createdBy === user.uid) setServer(newData);
+            setShowEditServer(false);
+          }}
         />
       )}
     </main>

@@ -3,15 +3,17 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import RoleplayerForm from '../forms/RoleplayerForm';
 
 const EXP_COLORS = { 'Principiante': 'badge-gray', 'Intermedio': 'badge-blue', 'Avanzado': 'badge-yellow', 'Veterano': 'badge-green' };
 
 export default function RoleplayerDetail() {
   const { id } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [rp, setRp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEditRp, setShowEditRp] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -70,7 +72,11 @@ export default function RoleplayerDetail() {
             </div>
           )}
 
-          {isAdmin && (
+          <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={() => setShowEditRp(true)}>
+            {isAdmin || rp.createdBy === user.uid ? '✏️ Editar Perfil' : '📝 Sugerir Edición'}
+          </button>
+
+          {(isAdmin || rp.createdBy === user.uid) && (
             <button className="btn btn-danger" style={{ width: '100%', justifyContent: 'center' }} onClick={handleDelete} id="btn-delete-rp">
               🗑 Eliminar Perfil
             </button>
@@ -94,6 +100,17 @@ export default function RoleplayerDetail() {
           )}
         </div>
       </div>
+
+      {showEditRp && (
+        <RoleplayerForm
+          initialData={rp}
+          onClose={() => setShowEditRp(false)}
+          onCreated={(newData) => {
+            if (isAdmin || rp.createdBy === user.uid) setRp(newData);
+            setShowEditRp(false);
+          }}
+        />
+      )}
     </main>
   );
 }

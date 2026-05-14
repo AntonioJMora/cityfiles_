@@ -104,7 +104,7 @@ export default function Characters() {
                 </Link>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{char.age ? `${char.age} años` : ''}</span>
               </div>
-              {isAdmin && (
+              {(isAdmin || char.createdBy === user.uid) && (
                 <button
                   className="btn btn-danger btn-sm"
                   style={{ marginTop: 12 }}

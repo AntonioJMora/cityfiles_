@@ -31,9 +31,9 @@ export default function Navbar() {
           Roleadores
         </NavLink>
         {isAdmin && (
-          <span className="badge badge-yellow" style={{ alignSelf: 'center', marginLeft: 8 }}>
-            Admin
-          </span>
+          <NavLink to="/admin" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} style={{ color: 'var(--neon-yellow)' }}>
+            Panel Admin
+          </NavLink>
         )}
       </div>
 

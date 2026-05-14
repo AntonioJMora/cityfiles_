@@ -91,7 +91,7 @@ export default function Servers() {
                 <p style={{ fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {server.description}
                 </p>
-                {isAdmin && (
+                {(isAdmin || server.createdBy === user.uid) && (
                   <button
                     className="btn btn-danger btn-sm"
                     style={{ marginTop: 12 }}

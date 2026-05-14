@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import CharacterForm from '../forms/CharacterForm';
 
 const STATUS_COLORS = { Activo: 'badge-green', Muerto: 'badge-red', Desaparecido: 'badge-yellow', Retirado: 'badge-gray' };
 const ALIGNMENT_LABELS = {
@@ -13,10 +14,11 @@ const ALIGNMENT_LABELS = {
 
 export default function CharacterDetail() {
   const { id } = useParams();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [character, setCharacter] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -74,7 +76,11 @@ export default function CharacterDetail() {
             </div>
           </div>
 
-          {isAdmin && (
+          <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginBottom: 10 }} onClick={() => setShowEdit(true)}>
+            {isAdmin || c.createdBy === user.uid ? '✏️ Editar Personaje' : '📝 Sugerir Edición'}
+          </button>
+
+          {(isAdmin || c.createdBy === user.uid) && (
             <button className="btn btn-danger" style={{ width: '100%', justifyContent: 'center' }} onClick={handleDelete} id="btn-delete-character">
               🗑 Eliminar Personaje
             </button>
@@ -109,6 +115,17 @@ export default function CharacterDetail() {
           )}
         </div>
       </div>
+
+      {showEdit && (
+        <CharacterForm
+          initialData={character}
+          onClose={() => setShowEdit(false)}
+          onCreated={(newData) => {
+            if (isAdmin || c.createdBy === user.uid) setCharacter(newData);
+            setShowEdit(false);
+          }}
+        />
+      )}
     </main>
   );
 }

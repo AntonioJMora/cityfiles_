@@ -104,7 +104,7 @@ export default function Roleplayers() {
                 </p>
               )}
 
-              {isAdmin && (
+              {(isAdmin || rp.createdBy === user.uid) && (
                 <button
                   className="btn btn-danger btn-sm"
                   style={{ marginTop: 12 }}

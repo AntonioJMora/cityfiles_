@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,10 +7,10 @@ const TYPES    = ['Realista', 'Semirealista', 'Temático', 'Hardcore', 'Casual']
 const STATUSES = ['Activo', 'En desarrollo', 'Cerrado'];
 const COLORS   = ['#00ff88', '#ffd700', '#00cfff', '#ff3b5c', '#bf9fff', '#ff8c00', '#00e5ff'];
 
-export default function ServerForm({ onClose, onCreated }) {
-  const { user } = useAuth();
+export default function ServerForm({ initialData, onClose, onCreated }) {
+  const { user, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(initialData || {
     name: '', type: 'Semirealista', status: 'Activo',
     slots: '', whitelist: '', description: '', rules: '',
     discord: '', color: '#00ff88',
@@ -23,13 +23,35 @@ export default function ServerForm({ onClose, onCreated }) {
     if (!form.name.trim()) return;
     setLoading(true);
     try {
-      const docRef = await addDoc(collection(db, 'servers'), {
+      const dataToSave = {
         ...form,
         slots: form.slots ? Number(form.slots) : null,
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      onCreated({ id: docRef.id, ...form });
+      };
+
+      if (initialData) {
+        if (isAdmin || initialData.createdBy === user.uid) {
+          await updateDoc(doc(db, 'servers', initialData.id), dataToSave);
+          onCreated({ ...initialData, ...dataToSave });
+        } else {
+          await addDoc(collection(db, 'pendingEdits'), {
+            targetCollection: 'servers',
+            targetDocId: initialData.id,
+            targetName: initialData.name,
+            suggestedBy: user.displayName || user.email,
+            newData: dataToSave,
+            createdAt: serverTimestamp()
+          });
+          alert('Tu sugerencia de edición ha sido enviada a moderación.');
+          onClose();
+        }
+      } else {
+        const docRef = await addDoc(collection(db, 'servers'), {
+          ...dataToSave,
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+        });
+        onCreated({ id: docRef.id, ...dataToSave });
+      }
     } catch (err) {
       console.error(err);
       alert('Error al guardar. Revisa la consola.');
@@ -42,7 +64,7 @@ export default function ServerForm({ onClose, onCreated }) {
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2>🌆 Nuevo Servidor</h2>
+          <h2>{initialData ? '✏️ Editar Servidor' : '🌆 Nuevo Servidor'}</h2>
           <button className="modal-close" onClick={onClose} id="close-server-form">✕</button>
         </div>
 
@@ -118,7 +140,7 @@ export default function ServerForm({ onClose, onCreated }) {
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={loading} id="submit-server-form">
-              {loading ? 'Guardando...' : '+ Crear Servidor'}
+              {loading ? 'Guardando...' : initialData ? 'Guardar Cambios' : '+ Crear Servidor'}
             </button>
           </div>
         </form>
