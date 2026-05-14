@@ -117,7 +117,9 @@ export default function ServerDetail() {
                       <span className={`badge ${STATUS_COLORS[char.status] || 'badge-gray'}`}>{char.status}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                      <span className="badge badge-blue">{char.faction}</span>
+                      <span className="badge badge-blue">{char.job || 'Sin empleo'}</span>
+                      <span className="badge badge-gray">{char.legalType}</span>
+                      {char.illegalGroup && <span className="badge badge-red">{char.illegalGroup}</span>}
                       {char.rank && <span className="badge badge-gray">{char.rank}</span>}
                     </div>
                     <p style={{ fontSize: '0.85rem' }}>Jugador: <span className="mono">{char.player || '—'}</span></p>

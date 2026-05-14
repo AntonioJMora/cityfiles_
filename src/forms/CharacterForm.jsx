@@ -3,7 +3,7 @@ import { collection, addDoc, getDocs, serverTimestamp, query, orderBy } from 'fi
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
-const FACTIONS   = ['LSPD', 'LSFD', 'EMS', 'Gobierno', 'Ballas', 'Vagos', 'Marabunta', 'Lost MC', 'Empresario', 'Civil', 'Otra'];
+const LEGAL_TYPES = ['Legal', 'Civil legal', 'Civil ilegal', 'Ilegal'];
 const STATUSES   = ['Activo', 'Muerto', 'Desaparecido', 'Retirado'];
 const ALIGNMENTS = ['Legal Bueno', 'Neutral Bueno', 'Caótico Bueno', 'Legal Neutral', 'Neutral', 'Caótico Neutral', 'Legal Malvado', 'Neutral Malvado', 'Caótico Malvado'];
 
@@ -13,9 +13,9 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: '', serverId: preselectedServer?.id || '', serverName: preselectedServer?.name || '',
-    age: '', race: '', faction: 'Civil', rank: '', status: 'Activo',
+    age: '', race: '', job: '', rank: '', legalType: 'Civil legal', illegalGroup: '', status: 'Activo',
     appearance: '', backstory: '', personality: '', skills: '',
-    alignment: 'Neutral', player: '',
+    alignment: 'Neutral', player: '', imageUrl: ''
   });
 
   useEffect(() => {
@@ -39,13 +39,16 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
     if (!form.name.trim() || !form.serverId) return;
     setLoading(true);
     try {
-      const docRef = await addDoc(collection(db, 'characters'), {
+      const charData = {
         ...form,
+        illegalGroup: (form.legalType === 'Civil ilegal' || form.legalType === 'Ilegal') ? form.illegalGroup : '',
         age: form.age ? Number(form.age) : null,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
-      });
-      onCreated({ id: docRef.id, ...form });
+      };
+
+      const docRef = await addDoc(collection(db, 'characters'), charData);
+      onCreated({ id: docRef.id, ...charData });
     } catch (err) {
       console.error(err);
       alert('Error al guardar. Revisa la consola.');
@@ -70,6 +73,12 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
               <input className="form-control" placeholder="Ej: John Mercer" value={form.name} onChange={e => set('name', e.target.value)} required id="input-char-name" />
             </div>
 
+            {/* Foto URL */}
+            <div className="form-group span-2">
+              <label>URL de Foto del personaje (opcional)</label>
+              <input type="text" className="form-control" placeholder="Ej: https://imgur.com/foto.jpg" value={form.imageUrl} onChange={e => set('imageUrl', e.target.value)} id="input-char-image" />
+            </div>
+
             {/* Servidor */}
             <div className="form-group span-2">
               <label>Servidor *</label>
@@ -83,19 +92,33 @@ export default function CharacterForm({ preselectedServer, onClose, onCreated })
               )}
             </div>
 
-            {/* Facción */}
+            {/* Trabajo */}
             <div className="form-group">
-              <label>Facción</label>
-              <select className="form-control" value={form.faction} onChange={e => set('faction', e.target.value)} id="select-char-faction">
-                {FACTIONS.map(f => <option key={f}>{f}</option>)}
-              </select>
+              <label>Trabajo / Ocupación</label>
+              <input className="form-control" placeholder="Ej: Mecánico" value={form.job} onChange={e => set('job', e.target.value)} id="input-char-job" />
             </div>
 
             {/* Rango */}
             <div className="form-group">
               <label>Rango / Cargo</label>
-              <input className="form-control" placeholder="Ej: Detective" value={form.rank} onChange={e => set('rank', e.target.value)} id="input-char-rank" />
+              <input className="form-control" placeholder="Ej: Jefe de taller" value={form.rank} onChange={e => set('rank', e.target.value)} id="input-char-rank" />
             </div>
+
+            {/* Legalidad */}
+            <div className="form-group">
+              <label>Tipo de legalidad</label>
+              <select className="form-control" value={form.legalType} onChange={e => set('legalType', e.target.value)} id="select-char-legal">
+                {LEGAL_TYPES.map(f => <option key={f}>{f}</option>)}
+              </select>
+            </div>
+
+            {/* Grupo Ilegal */}
+            {(form.legalType === 'Civil ilegal' || form.legalType === 'Ilegal') && (
+              <div className="form-group">
+                <label>Grupo Ilegal</label>
+                <input className="form-control" placeholder="Ej: Ballas, Vagos..." value={form.illegalGroup} onChange={e => set('illegalGroup', e.target.value)} id="input-char-illegalgroup" />
+              </div>
+            )}
 
             {/* Estado */}
             <div className="form-group">

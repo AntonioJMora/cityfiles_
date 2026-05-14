@@ -45,10 +45,15 @@ export default function CharacterDetail() {
       <div className="detail-grid">
         {/* Sidebar */}
         <div className="detail-sidebar">
-          <h1 style={{ fontSize: '1.6rem', marginBottom: 8 }}>{c.name}</h1>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+          {c.imageUrl && (
+            <div style={{ marginBottom: 20, textAlign: 'center' }}>
+              <img src={c.imageUrl} alt={c.name} style={{ width: 140, height: 140, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--neon-yellow)' }} />
+            </div>
+          )}
+          <h1 style={{ fontSize: '1.6rem', marginBottom: 8, textAlign: c.imageUrl ? 'center' : 'left' }}>{c.name}</h1>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, justifyContent: c.imageUrl ? 'center' : 'flex-start' }}>
             <span className={`badge ${STATUS_COLORS[c.status] || 'badge-gray'}`}>{c.status}</span>
-            <span className="badge badge-blue">{c.faction}</span>
+            <span className="badge badge-blue">{c.job || 'Sin empleo'}</span>
             {c.rank && <span className="badge badge-gray">{c.rank}</span>}
           </div>
 
@@ -56,6 +61,8 @@ export default function CharacterDetail() {
             <h3>Datos básicos</h3>
             <div className="info-row"><span className="label">Edad</span><span className="value">{c.age ? `${c.age} años` : '—'}</span></div>
             <div className="info-row"><span className="label">Origen</span><span className="value">{c.race || '—'}</span></div>
+            <div className="info-row"><span className="label">Tipo</span><span className="value">{c.legalType || '—'}</span></div>
+            {c.illegalGroup && <div className="info-row"><span className="label">Grupo Ilegal</span><span className="value">{c.illegalGroup}</span></div>}
             <div className="info-row"><span className="label">Alineamiento</span><span className="value">{ALIGNMENT_LABELS[c.alignment] || c.alignment || '—'}</span></div>
             <div className="info-row">
               <span className="label">Servidor</span>
