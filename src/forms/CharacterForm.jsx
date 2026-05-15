@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
 const LEGAL_TYPES = ['Legal', 'Civil legal', 'Civil ilegal', 'Ilegal'];
-const STATUSES   = ['Activo', 'Muerto', 'Desaparecido', 'Retirado'];
+const STATUSES = ['Activo', 'Muerto', 'Desaparecido', 'Retirado'];
+
+// Valida que una URL sea http/https y no un esquema peligroso
+function isValidImageUrl(url) {
+  if (!url) return true; // campo opcional, vacío es válido
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
 
 export default function CharacterForm({ initialData, preselectedServer, onClose, onCreated }) {
   const { user, isAdmin } = useAuth();
   const [servers, setServers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [imageError, setImageError] = useState('');
   const [form, setForm] = useState(initialData || {
     name: '', serverId: preselectedServer?.id || '', serverName: preselectedServer?.name || '',
     age: '', race: '', job: '', rank: '', legalType: 'Civil legal', illegalGroup: '', status: 'Activo',
@@ -28,6 +40,16 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const handleImageChange = (e) => {
+    const url = e.target.value;
+    set('imageUrl', url);
+    if (url && !isValidImageUrl(url)) {
+      setImageError('La URL debe empezar por https:// o http://');
+    } else {
+      setImageError('');
+    }
+  };
+
   const handleServerChange = (e) => {
     const id = e.target.value;
     const srv = servers.find(s => s.id === id);
@@ -37,6 +59,13 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.serverId) return;
+
+    // Validación de imagen antes de enviar
+    if (form.imageUrl && !isValidImageUrl(form.imageUrl)) {
+      setImageError('La URL debe empezar por https:// o http://');
+      return;
+    }
+
     setLoading(true);
     try {
       const charData = {
@@ -96,7 +125,20 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
             {/* Foto URL */}
             <div className="form-group span-2">
               <label>URL de Foto del personaje (opcional)</label>
-              <input type="text" className="form-control" placeholder="Ej: https://imgur.com/foto.jpg" value={form.imageUrl} onChange={e => set('imageUrl', e.target.value)} id="input-char-image" />
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ej: https://imgur.com/foto.jpg"
+                value={form.imageUrl}
+                onChange={handleImageChange}
+                id="input-char-image"
+                style={imageError ? { borderColor: '#E24B4A' } : {}}
+              />
+              {imageError && (
+                <span style={{ fontSize: '0.78rem', color: '#A32D2D', marginTop: 4, display: 'block' }}>
+                  {imageError}
+                </span>
+              )}
             </div>
 
             {/* Servidor */}
@@ -147,7 +189,6 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
                 {STATUSES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
-
 
             {/* Edad */}
             <div className="form-group">
@@ -200,7 +241,7 @@ export default function CharacterForm({ initialData, preselectedServer, onClose,
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn btn-primary" disabled={loading} id="submit-char-form">
+            <button type="submit" className="btn btn-primary" disabled={loading || !!imageError} id="submit-char-form">
               {loading ? 'Guardando...' : initialData ? 'Guardar Cambios' : '+ Crear Personaje'}
             </button>
           </div>
